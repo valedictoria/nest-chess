@@ -1,0 +1,10 @@
+*.nnue
+.obj/
+/nest
+/nest-*
+/bin/
+/games/
+*.o
+*.gcda
+*.profraw
+*.profdata
