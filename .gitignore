@@ -11,3 +11,4 @@
 lichess/lichess-bot/
 lichess/venv/
 lichess/config.yml
+__pycache__/
