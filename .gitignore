@@ -8,3 +8,6 @@
 *.gcda
 *.profraw
 *.profdata
+lichess/lichess-bot/
+lichess/venv/
+lichess/config.yml
