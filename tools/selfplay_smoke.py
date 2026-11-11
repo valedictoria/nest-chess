@@ -5,9 +5,18 @@ It checks the things a Lichess bot must never get wrong: the engine always
 answers, never sends a move the other instance rejects, never oversteps the
 clock, and handles ponder / ponderhit / stop. It does not measure strength.
 
-    tools/selfplay_smoke.py ./nest --games 4 --time 2000 --inc 50 [--ponder]
+    tools/selfplay_smoke.py ./nest --games 4 --time 2000 --inc 50 [--ponder] [--chess960]
 """
 import argparse, subprocess, sys, time
+
+
+# Chess960 starting positions with the king and rooks in varied places.
+CHESS960_STARTS = [
+    "nrbqkbrn/pppppppp/8/8/8/8/PPPPPPPP/NRBQKBRN w KQkq - 0 1",
+    "rkbnqbnr/pppppppp/8/8/8/8/PPPPPPPP/RKBNQBNR w KQkq - 0 1",
+    "bbqnnrkr/pppppppp/8/8/8/8/PPPPPPPP/BBQNNRKR w KQkq - 0 1",
+    "rnkrbbqn/pppppppp/8/8/8/8/PPPPPPPP/RNKRBBQN w KQkq - 0 1",
+]
 
 
 class Engine:
@@ -35,10 +44,15 @@ class Engine:
         self.send("quit"); self.p.wait(timeout=10)
 
 
-def play(path, base, inc, ponder, max_plies):
+def play(path, base, inc, ponder, max_plies, fen=None):
     engines = [Engine(path), Engine(path)]
+    root = "position startpos"
     for e in engines:
+        if fen:
+            e.send("setoption name UCI_Chess960 value true")
         e.send("ucinewgame")
+    if fen:
+        root = "position fen " + fen
     clock = [base, base]
     moves, worst_margin = [], base
     pondering = [None, None]          # move each engine is pondering on, if any
@@ -52,11 +66,11 @@ def play(path, base, inc, ponder, max_plies):
                 e.send("ponderhit")
             else:
                 e.send("stop"); e.wait("bestmove")          # discard the ponder search
-                e.send("position startpos moves " + " ".join(moves))
+                e.send(root + " moves " + " ".join(moves))
                 e.send(f"go wtime {clock[0]} btime {clock[1]} winc {inc} binc {inc}")
             pondering[stm] = None
         else:
-            e.send("position startpos" + (" moves " + " ".join(moves) if moves else ""))
+            e.send(root + (" moves " + " ".join(moves) if moves else ""))
             e.send(f"go wtime {clock[0]} btime {clock[1]} winc {inc} binc {inc}")
         line, lines = e.wait("bestmove")
         used = int((time.monotonic() - t0) * 1000)
@@ -73,7 +87,7 @@ def play(path, base, inc, ponder, max_plies):
             break
         moves.append(parts[1])
         if ponder and len(parts) >= 4 and parts[2] == "ponder":
-            e.send("position startpos moves " + " ".join(moves + [parts[3]]))
+            e.send(root + " moves " + " ".join(moves + [parts[3]]))
             e.send(f"go ponder wtime {clock[0]} btime {clock[1]} winc {inc} binc {inc}")
             pondering[stm] = parts[3]
     for i, e in enumerate(engines):
@@ -91,9 +105,11 @@ def main():
     ap.add_argument("--inc", type=int, default=50, help="increment, ms")
     ap.add_argument("--ponder", action="store_true")
     ap.add_argument("--max-plies", type=int, default=400)
+    ap.add_argument("--chess960", action="store_true", help="play from Chess960 starting positions")
     a = ap.parse_args()
     for g in range(a.games):
-        plies, result, margin = play(a.engine, a.time, a.inc, a.ponder, a.max_plies)
+        fen = CHESS960_STARTS[g % len(CHESS960_STARTS)] if a.chess960 else None
+        plies, result, margin = play(a.engine, a.time, a.inc, a.ponder, a.max_plies, fen)
         print(f"game {g + 1}: {plies} plies, {result}, lowest clock {margin} ms", flush=True)
     print("OK")
 
