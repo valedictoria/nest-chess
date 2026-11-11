@@ -1,12 +1,4 @@
-<p align="center">
-  <a href="https://imgur.com/a/pd4rrTQ">
-    <img src="https://i.imgur.com/pd4rrTQ.png" alt="Nest logo" width="260">
-  </a>
-</p>
-
-<h1 align="center">Nest</h1>
-
-<p align="center">A fast, modern UCI chess engine written in C++20.</p>
+![Nest Chess](nest.png)
 
 Nest combines legal move generation, alpha-beta search, a shared transposition
 table, lazy SMP, and incremental NNUE evaluation. It is designed to be easy to
